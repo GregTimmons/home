@@ -1,0 +1,4 @@
+# This is a whitelist. Dont check in random things unless intentionally added since this is meant to be at ~
+*
+!.bashrc
+!.gitignore
