@@ -109,7 +109,7 @@ alias kc=kubectl
 # -----------------
 # AWS Stuff
 # -----------------
-. ~/bin/awsp # Profile selector
+. ~/bin/awsp
+. ~/bin/aws-ec2-ls.sh
 complete -C '/usr/local/bin/aws_completer' aws
-alias aws-ec2-ls="aws ec2 describe-instances --query \"Reservations[*].Instances[*].[Tags[?Key=='Name'].Value, InstanceId, PublicDnsName]\""
 
