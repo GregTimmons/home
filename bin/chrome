@@ -1,0 +1,2 @@
+#!/usr/bin/bash
+/mnt/c/progra~1/Google/Chrome/Application/chrome.exe --profile-directory='C:\Users\greg.timmons_service\AppData\Local\Google\Chrome\User Data\Profile 1' ${@}

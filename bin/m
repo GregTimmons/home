@@ -1,0 +1,23 @@
+#!/usr/bin/bash
+
+M=${1}
+case ${M} in 
+	1 | mw)
+		echo 1; 
+		cd /workspace/partsledger-middleware;
+		exit 0; 
+		;;
+	2 | p)
+		echo 2; 
+		cd /workspace/parts;
+		exit 0; 
+		;;
+	3 | sl)
+		cd /workspace/sl_app; 
+		exit 0; 
+		;;
+		
+	* )
+		echo "Expected Arg";
+		exit 1; 
+esac

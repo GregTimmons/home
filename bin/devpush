@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+BRANCH=$(git status | head -1 | awk '{print $3}'); 
+git switch devops; 
+git reset --hard ${BRANCH}
+git push --force; 
+git switch ${BRANCH}; 

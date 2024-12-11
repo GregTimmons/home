@@ -1,0 +1,26 @@
+#!/bin/bash
+
+function listLogs() {
+	aws logs describe-log-groups | grep logGroupName | awk '{print $2}' | sed 's/[",]//g' | awk '{printf "%2d) %s\n", NR, $1}';
+}
+
+function getLog() {
+	listLogs | grep ${1} | head -1 | awk '{print $2}'; 
+}
+
+LOG=${1}; 
+shift; 
+
+if [ -z ${LOG} ]; then
+	echo "Please select a log:";
+	listLogs; 
+	exit 0; 
+fi
+
+
+
+LOGGROUPNAME=$(getLog ${LOG}) 
+echo "Viewing Log ${LOGGROUPNAME}."
+aws logs tail ${LOGGROUPNAME} ${@}
+
+

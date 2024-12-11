@@ -1,0 +1,8 @@
+#!/usr/bin/bash
+DIR=$(dirname -- "$( readlink -f -- "$0"; )"; );
+NPX=/home/gbtimmon/.nvm/versions/node/v18.3.0/bin/npx
+if [[ "$1" == "-e" ]]; then
+	vi ${DIR}/qq.ts
+else
+	${NPX} ts-node ${DIR}/qq.ts $@
+fi 	

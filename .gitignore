@@ -2,5 +2,7 @@
 *
 !.bashrc
 !.gitignore
+!.config
 !.config/nvim
-!./bin/*
+!bin
+!bin/*
