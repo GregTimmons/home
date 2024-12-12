@@ -8,6 +8,9 @@
 #   Return value: selected index (0 for opt1, 1 for opt2 ...)
 function select_option {
 
+    CURRENT=$1 && shift
+    CURRENT_NAME=$1 && shift
+
     # little helpers for terminal print control and key input
     ESC=$( printf "\033")
     cursor_blink_on()  { printf "$ESC[?25h"; }
@@ -15,7 +18,7 @@ function select_option {
     cursor_to()        { printf "$ESC[$1;${2:-1}H"; }
     print_option()     { printf "   $1 "; }
     print_selected()   { printf "  $ESC[7m $1 $ESC[27m"; }
-    print_current()    { if [ "$1" = "$AWS_PROFILE" ]; then printf "(current)"; fi; }
+    print_current()    { if [ "$1" = "$CURRENT" ]; then printf "$CURRENT_NAME"; fi; }
     get_cursor_row()   { IFS=';' read -sdR -p $'\E[6n' ROW COL; echo ${ROW#*[}; }
     key_input()        { read -s -n3 key 2>/dev/null >&2
                          if [[ $key = $ESC[A ]]; then echo up;    fi

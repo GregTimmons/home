@@ -1,12 +1,15 @@
 #!/usr/bin/env bash
 . ~/bin/select_options.sh
 . ~/bin/aws-ec2-ls.sh
-VALUE=$1
-if [ -z "$VALUE" ]; then 
-   OPTIONS_STRING=$(aws-ec2-ls)
-   readarray -t OPTIONS <<<"${OPTIONS_STRING}"
-   select_option "${OPTIONS[@]}"
-   CHOICE=$?
-   VALUE=${OPTIONS[$CHOICE]}
-fi
-aws ssm start-session --target $(echo $VALUE | sed 's/|/ /g' | awk '{ print $2 }') 
+function aws-ssm {
+   VALUE=$1
+   if [ -z "$VALUE" ]; then 
+      OPTIONS_STRING=$(aws-ec2-ls)
+      readarray -t OPTIONS <<<"${OPTIONS_STRING}"
+      select_option "${__AWS_SSM_PREV}" "(previous)" "${OPTIONS[@]}"
+      CHOICE=$?
+      VALUE=${OPTIONS[$CHOICE]}
+   fi
+   export __AWS_SSM_PREV="${VALUE}"
+   aws ssm start-session --target $(echo ${VALUE} | awk '{ print $3 }')  
+}
