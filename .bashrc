@@ -97,8 +97,7 @@ alias m1="cd /workspace/partsledger-middleware"
 alias m2="cd /workspace/parts"
 alias m3="cd /workspace/sl_app"
 alias m4="cd /workspace/partsledger-scripts/DataQuality"
-
-
+alias dc="docker-compose"
 
 export PATH=$PATH:/snap/bin
 export PATH=/home/gbtimmon/.meteor:$PATH
@@ -110,6 +109,7 @@ alias kc=kubectl
 # AWS Stuff
 # -----------------
 . ~/bin/awsp
+. ~/bin/aws-ssm
 . ~/bin/aws-ec2-ls.sh
 complete -C '/usr/local/bin/aws_completer' aws
 

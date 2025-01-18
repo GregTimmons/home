@@ -9,7 +9,7 @@ function awsp {
     if [ -z "$VALUE" ]; then 
         OPTIONS_STRING=$(cat ~/.aws/config | grep profile | awk '{print $2}' | sed -s 's/\]//')
         readarray -t OPTIONS <<<"${OPTIONS_STRING}"
-        select_option ${AWS_PROFILE:-None} "(current)" "${OPTIONS[@]}"
+        select_option $AWS_PROFILE "(current)" "${OPTIONS[@]}"
         CHOICE=$?
         VALUE=${OPTIONS[$CHOICE]}
     fi
