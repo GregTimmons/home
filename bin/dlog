@@ -25,6 +25,5 @@ function dlog {
 
    ID=$(echo ${VALUE} | awk '{print $1}')
 
-
-
+   docker container log ${ID} ${@}; 
 }
