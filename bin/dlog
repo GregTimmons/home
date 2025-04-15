@@ -5,25 +5,20 @@
 
 function dlog {
 
-   VALUE=$1; shift;
-
-   if [ -z "$VALUE" ]; then 
-      OPTIONS_STRING=$(docker container list | tail -n +2)
-      readarray -t OPTIONS <<<"${OPTIONS_STRING}"
-      select_option "${__AWS_SSM_PREV}" "(previous)" "${OPTIONS[@]}"
-      CHOICE=$?
+   OPTIONS_STRING=$(docker container list | tail -n +2)
+   readarray -t OPTIONS <<<"${OPTIONS_STRING}"
+   select_option "${__AWS_SSM_PREV}" "(previous)" "${OPTIONS[@]}"
+   CHOICE=$?
       
-      if [ $CHOICE -eq 255 ]; then 
-         echo "Goodbye!"
-         return; 
-      fi
-
-      VALUE=${OPTIONS[$CHOICE]}
+   if [ $CHOICE -eq 255 ]; then 
+      echo "Goodbye!"
+      return; 
    fi
 
+   VALUE=${OPTIONS[$CHOICE]}
    export __DLOG_PREV="${VALUE}"
 
    ID=$(echo ${VALUE} | awk '{print $1}')
 
-   docker container log ${ID} ${@}; 
+   docker logs ${@} ${ID}; 
 }
