@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# Runs the tests for the project locally with docker redis and postgres
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+${SCRIPT_DIR}/sl_test_redis $@
+${SCRIPT_DIR}/sl_test_pg $@
+
+if [ -f ./go.mod ]; then
+  go test -p 1 ./...
+else
+  yarn test;
+fi

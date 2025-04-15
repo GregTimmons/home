@@ -1,2 +1,0 @@
-#!/usr/bin/env bash
-kubectl logs -l app.kubernetes.io/name=${1} -n backend --all-containers=true -f

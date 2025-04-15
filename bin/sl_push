@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 BRANCH=$(git status | head -1 | awk '{print $3}'); 
-git switch devops; 
+TARGET=${1:-devops}
+echo pushing ${BRANCH} to ${TARGET}
+git switch ${TARGET}; 
 git reset --hard ${BRANCH}
 git push --force; 
 git switch ${BRANCH}; 

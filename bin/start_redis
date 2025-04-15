@@ -1,8 +1,0 @@
-sudo docker run                        \
-     -d                                \
-     --name redis                      \
-     -p 6379:6379                      \
-     -v ~/bin/redis.conf:/redis.conf   \
-     -e ALLOW_EMPTY_PASSWORD=yes       \
-     -e REDIS_PASSWORD=redis           \
-     redis redis-server /redis.conf

@@ -6,10 +6,8 @@
 #   Arguments   : list of options, maximum of 256
 #                 "opt1" "opt2" ...
 #   Return value: selected index (0 for opt1, 1 for opt2 ...)
-function select_option {
-
-    CURRENT=$1 && shift
-    CURRENT_NAME=$1 && shift
+CURRENT=$1 && shift
+Cshare/nvim/lazy/nvim-ufo/lua/ufo/provider/treesitter.luaURRENT_NAME=$1 && shift
 
     # little helpers for terminal print control and key input
     ESC=$( printf "\033")
@@ -33,7 +31,7 @@ function select_option {
     local startrow=$(($lastrow - $#))
 
     # ensure cursor and input echoing back on upon a ctrl+c during read -s
-    trap "cursor_blink_on; stty echo; printf '\n'; return 255" 2
+    trap "cursor_blink_on; stty echo; printf '\n'; exit" 2
     cursor_blink_off
  
     local selected=0

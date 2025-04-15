@@ -3,12 +3,12 @@
 . ~/bin/aws-ec2-ls.sh
 
 
-function aws-ssm {
+function dlog {
 
-   VALUE=$1
+   VALUE=$1; shift;
 
    if [ -z "$VALUE" ]; then 
-      OPTIONS_STRING=$(aws-ec2-ls)
+      OPTIONS_STRING=$(docker container list | tail -n +2)
       readarray -t OPTIONS <<<"${OPTIONS_STRING}"
       select_option "${__AWS_SSM_PREV}" "(previous)" "${OPTIONS[@]}"
       CHOICE=$?
@@ -21,7 +21,10 @@ function aws-ssm {
       VALUE=${OPTIONS[$CHOICE]}
    fi
 
-   export __AWS_SSM_PREV="${VALUE}"
+   export __DLOG_PREV="${VALUE}"
 
-   aws ssm start-session --target $(echo ${VALUE} | awk '{ print $2 }')  
+   ID=$(echo ${VALUE} | awk '{print $1}')
+
+
+
 }

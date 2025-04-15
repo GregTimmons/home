@@ -1,0 +1,101 @@
+#!/usr/bin/env bash
+function print_yellow() {
+    echo -e "\033[33m${1}\033[0m"
+}
+
+function get_route_param_in_name() {
+    local param=$1
+    local first_zone_id=$(aws route53 list-hosted-zones --query 'HostedZones[0].Id' --output text)
+    aws route53 list-resource-record-sets --hosted-zone-id "${first_zone_id}" \
+        --query "ResourceRecordSets[?contains(Name, \`${param}\`)].Name" \
+        --output text
+}
+
+function is_port_open() {
+    netstat -tln | tail -n +3 | awk '{ print $4 }' | sed -e 's|[^:]*:||g' | grep -q $1
+}
+
+function get_next_open_port() {
+    # exports OPEN_PORT;
+    local port=$1
+    while true; do
+        echo "Checking port ${port}..."
+        is_port_open $port
+        if [ $? -eq 1 ]; then
+            OPEN_PORT=$port
+            return
+        else
+            echo "Port ${port} is already in use. Trying $((port + 1))..."
+            port=$((port + 1))
+        fi
+    done
+}
+
+function main() {
+    SCRIPT_DIR="$( cd -- "$( dirname -- "${BASH_SOURCE[0]:-$0}"; )" &> /dev/null && pwd 2> /dev/null; )";
+    # Initialize flags
+    TARGET="reader"
+    PORT=12300 # Default port
+
+    # Parse command line options
+    while getopts "wp:" opt; do
+    case $opt in
+        w)
+            TARGET="writer"
+            ;;
+        p)
+            PORT="$OPTARG"
+            ;;
+        \?)
+            echo "Invalid option: -$OPTARG" >&2
+            exit 1
+            ;;
+    esac
+    done
+
+    # Shift the options out of the argument list
+    shift $((OPTIND-1))
+
+    # Now $1 is the AWS_PROFILE argument
+    AWS_PROFILE=${1:-${AWS_PROFILE}}
+    if [ -z "${AWS_PROFILE}" ]; then
+        echo "AWS_PROFILE is not set. This script must be run from a profile set in the environment."
+        exit 1
+    fi
+
+    # Print the type of tunnel
+    if [ "${IS_WRITER}" = true ]; then
+        echo "Starting writer tunnel with information from AWS PROFILE=${AWS_PROFILE}"
+    else
+        echo "Starting reader tunnel with information from AWS PROFILE=${AWS_PROFILE}"
+    fi
+
+    # Ensure Logged in
+    if aws sts get-caller-identity &> /dev/null; then
+        echo "Logged in!"
+    else
+        aws sso login
+    fi
+
+    INSTANCE_ID=$(aws ec2 describe-instances --query 'Reservations[].Instances[].InstanceId[]' --filters 'Name=tag:Name,Values=*Bastion*' --output=text)
+
+    get_next_open_port ${PORT}
+    if [ "${OPEN_PORT}" -ne "${PORT}" ]; then
+        echo "Port ${PORT} is already in use. Using ${OPEN_PORT} instead."
+    fi
+
+    URL=$(get_route_param_in_name ${TARGET})
+
+    echo "    AWS_PROFILE=$(print_yellow ${AWS_PROFILE})"
+    echo "    INSTANCE_ID=$(print_yellow ${INSTANCE_ID})"
+    echo "    URL=$(print_yellow ${URL})"
+    echo "    PORT=$(print_yellow ${PORT})"
+
+    exec aws ssm start-session \
+        --profile ${AWS_PROFILE} \
+        --target ${INSTANCE_ID} \
+        --document-name AWS-StartPortForwardingSessionToRemoteHost \
+        --parameters host="${URL}",portNumber="27017",localPortNumber="${PORT}"
+}
+
+main $@

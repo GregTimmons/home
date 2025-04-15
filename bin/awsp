@@ -4,13 +4,19 @@
 # This needs to be a function, not a script so it can change the env of the shell it is in. 
 #   If it was just a script you would have to source it which would be annoying
 function awsp {
+    trap 'echo "Caught Ctrl+C, continuing...";' SIGINT
     VALUE=$1
-
     if [ -z "$VALUE" ]; then 
         OPTIONS_STRING=$(cat ~/.aws/config | grep profile | awk '{print $2}' | sed -s 's/\]//')
         readarray -t OPTIONS <<<"${OPTIONS_STRING}"
-        select_option ${AWS_PROFILE:-None} "(current)" "${OPTIONS[@]}"
+        (select_option ${AWS_PROFILE:-None} "(current)" "${OPTIONS[@]}")
         CHOICE=$?
+
+        if [ $CHOICE -eq 255 ]; then 
+            echo "Goodbye!";
+            return; 
+        fi
+
         VALUE=${OPTIONS[$CHOICE]}
     fi
     export AWS_PROFILE=$VALUE

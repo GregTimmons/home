@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+
+FORCE=false
+while getopts "f" flag; do
+    case "${flag}" in
+        f) FORCE=true ;;
+    esac
+done
+
+(
+    if $FORCE || ! docker container inspect sl_redis >/dev/null 2>&1; then
+        echo "stopping docker container"
+        docker container kill sl_redis     2>/dev/null
+        docker container rm sl_redis       2>/dev/null
+
+        echo "Starting docker container"
+        docker run           \
+            --name sl_redis  \
+            -d               \
+            redis
+    else
+        echo "Redis container already running"
+    fi
+
+    echo "settings hosts file if needed"
+    STATIC_DNS=$(cat /etc/hosts | grep redis | head -1 | awk '{print $1}')
+    if [ "${STATIC_DNS}" != "127.0.0.1" ];
+    then
+        sudo sed --in-place 's/\(\s\)localhost\(\s\)*/\1localhost redis\2/' /etc/hosts
+    fi
+)

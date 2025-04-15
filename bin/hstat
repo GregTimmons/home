@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+helm status ${1} --show-resources

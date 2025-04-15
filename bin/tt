@@ -1,0 +1,220 @@
+#!/bin/bash
+# /usr/local/bin/db-connect.sh
+
+# Handle broken pipe errors
+exec 2>/dev/null     # Redirect stderr to /dev/null
+trap '' PIPE        # Ignore SIGPIPE
+
+# Usage instructions
+usage() {
+    cat << EOF
+Usage: $(basename $0) AWS_PROFILE DB_HOST [LOCAL_PORT]
+
+Connect to a PostgreSQL database through an AWS SSM bastion host using IAM authentication.
+
+Required Parameters:
+    AWS_PROFILE     AWS SSO profile to use
+    DB_HOST         RDS database hostname
+
+Optional Parameters:
+    LOCAL_PORT      Local port to use for forwarding (defaults to 5432)
+
+Example:
+    $(basename $0) my-profile my-db.cluster-xyz.region.rds.amazonaws.com
+    $(basename $0) my-profile my-db.cluster-xyz.region.rds.amazonaws.com 5433
+EOF
+    exit 1
+}
+
+# Parameter validation
+validate_params() {
+    # Check required parameters
+    if [ $# -lt 2 ]; then
+        echo "Error: Missing required parameters"
+        usage
+    fi
+
+    # Validate AWS Profile
+    if ! aws configure list-profiles | grep -q "^${1}$"; then
+        echo "Error: AWS Profile '${1}' not found"
+        exit 1
+    fi
+
+    if [ $# -eq 3 ] && (! [[ "${3}" =~ ^[0-9]+$ ]] || [ "${3}" -lt 1 ] || [ "${3}" -gt 65535 ]); then
+        echo "Error: Invalid LOCAL_PORT. Must be between 1 and 65535"
+        exit 1
+    fi
+
+    # Check for required commands
+    local required_commands=("aws" "psql" "sed")
+    for cmd in "${required_commands[@]}"; do
+        if ! command -v $cmd &> /dev/null; then
+            echo "Error: Required command '$cmd' not found"
+            exit 1
+        fi
+    done
+}
+
+# Cleanup function
+kill_existing_sessions() {
+    echo "Killing any existing sessions..."
+    pkill -f "session-manager-plugin" 2>/dev/null || true
+    local pids=$(jobs -p)
+    if [ ! -z "$pids" ]; then
+        kill $pids 2>/dev/null || true
+    fi
+}
+
+cleanup() {
+    echo -e "\nCleaning up connections..."
+    
+    # Kill SSM sessions
+    if pgrep -f "session-manager-plugin" > /dev/null; then
+        pkill -f "session-manager-plugin"
+        sleep 0.5
+        # Force kill if still running
+        pkill -9 -f "session-manager-plugin" 2>/dev/null || true
+    fi
+    
+    # Kill background jobs
+    local pids=$(jobs -p)
+    if [ ! -z "$pids" ]; then
+        kill $pids 2>/dev/null || true
+        sleep 0.5
+        # Force kill if still running
+        kill -9 $pids 2>/dev/null || true
+    fi
+    
+    # Clear any remaining port forwards
+    if netstat -an | grep -q ":$LOCAL_PORT.*LISTEN"; then
+        fuser -k $LOCAL_PORT/tcp 2>/dev/null || true
+    fi
+    
+    echo "Cleanup complete"
+    exit 0
+}
+
+# Main script
+main() {
+    # Parameters
+    local AWS_PROFILE=$1
+    local DB_HOST=$2
+    local DB_PORT=5432  # Default PostgreSQL port
+    local LOCAL_PORT=${3:-$DB_PORT}
+
+    # Set up signal handlers
+    trap 'cleanup' SIGINT SIGTERM
+
+    # Look up bastion instance
+    echo "Looking up bastion host by EC2 Name tag..."
+    # Get current region from profile
+    local AWS_REGION=$(aws configure get region --profile $AWS_PROFILE)
+    if [ -z "$AWS_REGION" ]; then
+        AWS_REGION="us-east-1"  # Default to us-east-1 if not set
+    fi
+
+    local BASTION_ID=$(aws ec2 describe-instances \
+        --profile $AWS_PROFILE \
+        --region $AWS_REGION \
+        --filters "Name=instance-state-name,Values=running" \
+        --query 'Reservations[*].Instances[*].[InstanceId,Tags[?Key==`Name`].Value|[0]]' \
+        --output text | grep -i bastion | awk '{print $1}' | head -n1)
+
+    if [ -z "$BASTION_ID" ]; then
+        echo "Error: No running bastion instance found"
+        echo "Available bastion hosts:"
+        aws ec2 describe-instances \
+            --profile $AWS_PROFILE \
+            --region $AWS_REGION \
+            --filters "Name=instance-state-name,Values=running" \
+            --query 'Reservations[].Instances[].[Tags[?Key==`Name`].Value|[0]]' \
+            --output table
+        exit 1
+    fi
+
+    echo "Found bastion instance: $BASTION_ID for AWS Profile: $AWS_PROFILE in $AWS_REGION"
+
+    # Verify AWS SSO session
+    if ! aws sts get-caller-identity --profile $AWS_PROFILE &>/dev/null; then
+        echo "Please login using 'aws sso login --profile $AWS_PROFILE' first"
+        exit 1
+    fi
+
+    # Get user identity for database connection
+    local USER_EMAIL=$(aws sts get-caller-identity --profile $AWS_PROFILE --query 'UserId' --output text | cut -d':' -f2)
+    local DB_USERNAME=$(echo $USER_EMAIL | sed -e 's/@.*//g')
+
+    echo "Setting up database connection..."
+    echo "Host: $DB_HOST"
+    echo "Port: $DB_PORT -> $LOCAL_PORT"
+    echo "Username: $DB_USERNAME"
+    echo "Bastion: $BASTION_ID"
+    echo
+
+    # Check if port is already in use
+    echo "Checking for existing sessions on port $LOCAL_PORT..."
+    local EXISTING_PID=$(lsof -ti :$LOCAL_PORT)
+    if [ -n "$EXISTING_PID" ]; then
+        echo "Port $LOCAL_PORT is already in use. Cleaning up existing session..."
+        kill $EXISTING_PID 2>/dev/null
+        # Give it a moment to clean up
+        sleep 1
+    fi
+
+    # Start SSM session for port forwarding
+    echo "Starting SSM port forwarding session..."
+    
+    # Generate RDS auth token before exec (since we won't be able to after)
+    echo "Generating authentication token..."
+    export PGPASSWORD=$(aws rds generate-db-auth-token \
+        --profile $AWS_PROFILE \
+        --hostname $DB_HOST \
+        --port $DB_PORT \
+        --region us-east-1 \
+        --username $DB_USERNAME)
+
+    # Download SSL certificate if needed
+    local SSL_CERT="$HOME/.postgresql/global-bundle.pem"
+    if [ ! -f "$SSL_CERT" ]; then
+        echo "Downloading RDS SSL certificate..."
+        mkdir -p "$HOME/.postgresql"
+        curl -s -o "$SSL_CERT" https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem
+    fi
+
+    echo
+    echo "=== Connection Details for Database Client ==="
+    echo "Host: localhost"
+    echo "Port: $LOCAL_PORT"
+    echo "Username: $DB_USERNAME"
+    echo "SSL Mode: verify-ca"
+    echo "SSL Certificate: $SSL_CERT"
+    echo
+    echo "=== IAM Authentication Token ==="
+    echo "Use this token as your database password:"
+    echo
+    echo "$PGPASSWORD"
+    echo
+    echo "=== Command Line Authentication Alternative (TablePlus, etc) ==="
+    echo "Alternatively, you can use this command as your password to connect to the database:"
+    echo
+    echo "aws rds generate-db-auth-token --profile $AWS_PROFILE --hostname $DB_HOST --port $DB_PORT --region us-east-1 --username $DB_USERNAME"
+    echo
+    echo "The SSM tunnel will remain active. Press Ctrl+C to close the connection when done."
+    echo
+
+    # Use exec to replace the current process with the SSM tunnel
+    exec aws ssm start-session \
+        --profile $AWS_PROFILE \
+        --target $BASTION_ID \
+        --document-name AWS-StartPortForwardingSessionToRemoteHost \
+        --parameters "{\"host\":[\"$DB_HOST\"],\"portNumber\":[\"$DB_PORT\"],\"localPortNumber\":[\"$LOCAL_PORT\"]}"
+}
+
+# Validate parameters
+if [ $# -lt 2 ]; then
+    echo "Error: Missing required parameters"
+    usage
+fi
+
+# Run main script
+main "$@"

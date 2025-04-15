@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+
+FORCE=false
+
+# Parse command line arguments
+while getopts "f" opt; do
+    case $opt in
+        f) FORCE=true ;;
+    esac
+done
+
+(
+    cd /workspace/sl_app/database/sequelize-sync;
+
+    # Check if container exists and is running
+    if $FORCE || ! docker container inspect sl_pg >/dev/null 2>&1; then
+        echo "stopping docker container"
+        docker container kill sl_pg     2>/dev/null
+        docker container rm sl_pg       2>/dev/null
+
+        echo "Starting docker container"
+        docker run                            \
+            --name sl_pg                      \
+            -p 5432:5432                      \
+            -e POSTGRES_USER=postgres         \
+            -e POSTGRES_PASSWORD=password     \
+            -e POSTGRES_DB=postgres           \
+            -d                                \
+            postgres
+
+        echo "settings hosts file if needed"
+        STATIC_DNS=$(cat /etc/hosts | grep postgres | head -1 | awk '{print $1}')
+        if [ "${STATIC_DNS}" != "127.0.0.1" ];
+        then
+            sudo sed --in-place 's/\(\s\)localhost\(\s\)*/\1localhost postgres\2/' /etc/hosts
+        fi
+
+        echo "running database load"
+        sleep 1
+        yarn install;
+        sleep 1
+        yarn test
+    else
+        echo "Docker container already running, skipping container creation"
+    fi
+)
+
+
+
+
+
+

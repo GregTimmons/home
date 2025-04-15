@@ -1,6 +1,7 @@
 #!/bin/bash
-. ~/.nvm/nvm.sh
-cd /workspace/partsledger-scripts/DataQuality;
-nvm use 18;
-cmd="source ~/.nvm/nvm.sh;  nvm use 18; cd  /workspace/partsledger-scripts/DataQuality; npm run start -- ${@}"
-sudo bash -c "$cmd"
+(
+  . ~/.nvm/nvm.sh
+  cd /workspace/partsledger-scripts/DataQuality;
+  nvm use 18;
+  npm run start -- ${@}
+)

@@ -45,7 +45,6 @@ alias alert='notify-send --urgency=low -i "$([ $? = 0 ] && echo terminal || echo
 # Alias definitions.
 # You may want to put all your additions into a separate file like
 # ~/.bash_aliases, instead of adding them here directly.
-# See /usr/share/doc/bash-doc/examples in the bash-doc package.
 if [ -f ~/.bash_aliases ]; then
     . ~/.bash_aliases
 fi
@@ -97,13 +96,15 @@ alias m1="cd /workspace/partsledger-middleware"
 alias m2="cd /workspace/parts"
 alias m3="cd /workspace/sl_app"
 alias m4="cd /workspace/partsledger-scripts/DataQuality"
+alias m5="cd /workspace/SNaaP/"
 alias dc="docker-compose"
+alias kc=kubectl
+alias lredis='kubectl exec --tty -i redis-client --namespace backend -- bash -c "REDISCLI_AUTH=\"redis\"  redis-cli -h redis-master"'
 
 export PATH=$PATH:/snap/bin
 export PATH=/home/gbtimmon/.meteor:$PATH
 . "$HOME/.cargo/env"
 
-alias kc=kubectl
 
 # -----------------
 # AWS Stuff
