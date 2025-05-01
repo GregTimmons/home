@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+JWT=${1:-$(cat -)}
+PARTS=($(echo "${JWT}" | tr '.' '\n'))
+
+HEAD=${PARTS[0]}
+BODY=${PARTS[1]}
+
+echo "{ \"header\": $(echo ${HEAD} | base64 -d ), \"body\": $(echo ${BODY} | base64 -d ) }" | jq . 
+
+
