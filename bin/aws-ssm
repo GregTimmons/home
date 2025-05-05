@@ -7,9 +7,16 @@ function aws-ssm {
 
    VALUE=$1
 
-   if [ -z "$VALUE" ]; then 
+   if [ -n "$VALUE" ]; then 
+      OPTIONS_STRING=$(aws-ec2-ls | grep "${VALUE}") 
+   else 
       OPTIONS_STRING=$(aws-ec2-ls)
-      readarray -t OPTIONS <<<"${OPTIONS_STRING}"
+   fi
+   readarray -t OPTIONS <<<"${OPTIONS_STRING}"
+
+   if [ -n "${VALUE}" ] && [ "${#OPTIONS[@]}" -eq "1" ]; then 
+      CHOICE=0
+   else 
       select_option "${__AWS_SSM_PREV}" "(previous)" "${OPTIONS[@]}"
       CHOICE=$?
       
@@ -17,11 +24,15 @@ function aws-ssm {
          echo "Goodbye!"
          return; 
       fi
-
-      VALUE=${OPTIONS[$CHOICE]}
    fi
 
-   export __AWS_SSM_PREV="${VALUE}"
 
+   VALUE=${OPTIONS[$CHOICE]}
+   echo -e "Connecting to..."
+   echo -e "\t$(echo ${VALUE} | awk '{ for (i=3; i<NF; i++){ printf("%s ", $i); }}')"
+   echo -e "\t$(echo ${VALUE} | awk '{ print $2 }')"
+   echo -e "\t$(echo ${VALUE} | awk '{ print $NF; }')"
+   
+   export __AWS_SSM_PREV="${VALUE}"
    aws ssm start-session --target $(echo ${VALUE} | awk '{ print $2 }')  
 }
