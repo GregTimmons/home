@@ -1,6 +1,21 @@
 #!/usr/bin/env bash
+
 BRANCH=$(git status | head -1 | awk '{print $3}'); 
 TARGET=${1:-devops}
+REMOTE=$(git remote get-url origin)
+
+if [[ ! "$TARGET" == @(devops|qa|staging) ]]; then 
+  echo "This script is meant to push to the softledger deployment branches only."
+  echo "selected branch must be one of [devops/qa/staging]"
+  exit 1;
+fi
+
+if [[ ! "$REMOTE" == "git@github.com:servicetrade/sl_app.git" ]]; then 
+  echo "This script is meant to push to the softledger deployment branches only."
+  echo "origin ${REMOTE} does not appear to be the servicetrade sl_app repo"
+  exit 1; 
+fi
+
 echo pushing ${BRANCH} to ${TARGET}
 git switch ${TARGET}; 
 git reset --hard ${BRANCH}
