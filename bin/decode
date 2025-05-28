@@ -1,0 +1,15 @@
+#!/usr/bin/env node
+
+require('dotenv').config()
+
+const fs = require('fs')
+const input = process.argv?.[2] || fs.readFileSync(0).toString()
+const forge = require('node-forge')
+const key = process.env.AES_KEY
+const iv = process.env.AES_IV
+
+const decipher = forge.cipher.createDecipher('AES-CBC', key);
+decipher.start({ iv });
+decipher.update(forge.util.createBuffer(forge.util.decode64(input)));
+decipher.finish();
+console.log(decipher.output.toString()); 
