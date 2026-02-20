@@ -1,2 +1,50 @@
 #!/usr/bin/env bash 
-kubectl logs -l app.kubernetes.io/name=${1} -n backend --all-containers=true -f ${@:2}
+
+# Parse named and unnamed arguments
+NAME=""
+STAGE=""
+
+# Loop through all arguments
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -e) STAGE="$2"; shift 2 ;;
+    -*) echo "Invalid option: $1" >&2; exit 1 ;;
+    *)
+      if [ -z "$NAME" ]; 
+      then 
+        NAME="$1"
+        shift
+      else
+        echo "Too many arguments provided" >&2
+        exit 1
+      fi
+      ;;
+  esac
+done
+
+# Validate required NAME argument
+if [ -z "$NAME" ]; then
+  echo "Error: NAME argument is required" >&2
+  exit 1
+fi
+
+shift $(($OPTIND - 1))
+
+
+if [ ! -z "$STAGE" ]; then
+  # Get list of available contexts
+  CONTEXTS=$(kubectl config get-contexts -o name)
+
+  echo $CONTEXTS
+
+  # Check if STAGE exists in contexts
+  if echo "$CONTEXTS" | grep -q "^$STAGE$"; then
+    kubectl config use-context "$STAGE"
+  else
+    echo "Error: Context '$STAGE' not found in available kubectl contexts:" >&2
+    echo "$CONTEXTS" >&2
+    exit 1
+  fi
+fi
+
+kubectl logs -l app.kubernetes.io/name=${NAME} -n backend --all-containers=true -f ${@:2}

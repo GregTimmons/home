@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+
+# Check if a file path argument is provided
+if [ $# -eq 0 ]; then
+    echo "Usage: $0 <file_path>"
+    echo "Example: $0 src/MyClass.php"
+    exit 1
+fi
+
+# Get the input file path
+input_file="$1"
+
+F=$(basename ${input_file})
+F="${F%.php}"  # Remove .php extension if present
+F="${F%Test}"   # Remove Test if present
+
+# Find the test file recursively in /workspace/SNaaP/tests
+test_dir="/workspace/SNaaP/tests"
+found_files=($(find "$test_dir" -name $F\* -type f 2>/dev/null))
+
+# Check how many files were found
+if [ ${#found_files[@]} -eq 0 ]; then
+    echo "No test file found matching: $F"
+    exit 1
+elif [ ${#found_files[@]} -eq 1 ]; then
+    # One file found, use it directly
+    selected_file="${found_files[0]}"
+else
+    # Multiple files found, let user choose
+    echo "Multiple test files found:"
+    for i in "${!found_files[@]}"; do
+        echo "[$i] ${found_files[$i]}"
+    done
+    
+    echo -n "Please select a file (0-$((${#found_files[@]}-1))): "
+    read -r choice
+    
+    # Validate input
+    if ! [[ "$choice" =~ ^[0-9]+$ ]] || [ "$choice" -lt 0 ] || [ "$choice" -ge ${#found_files[@]} ]; then
+        echo "Invalid selection. Please enter a number between 0 and $((${#found_files[@]}-1))."
+        exit 1
+    fi
+    
+    selected_file="${found_files[$choice]}"
+    echo "Selected: $selected_file"
+fi
+
+# Run the test in a subshell
+echo "#"
+echo "# RUNNING TESTS: $selected_file"
+echo "#"
+(
+    cd /workspace/SNaaP/tests
+    ../vendor/bin/phpunit "$selected_file"
+)
+

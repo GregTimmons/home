@@ -1,0 +1,2 @@
+#!/usr/bin/env bash
+docker exec -it snaap tail -f /var/log/snaap.log

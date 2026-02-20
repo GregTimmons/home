@@ -97,6 +97,7 @@ alias m2="cd /workspace/parts"
 alias m3="cd /workspace/sl_app"
 alias m4="cd /workspace/partsledger-scripts/DataQuality"
 alias m5="cd /workspace/SNaaP/"
+alias m6="cd /workspace/scheduler"
 alias dc="docker-compose"
 alias kc=kubectl
 alias lredis='kubectl exec --tty -i redis-client --namespace backend -- bash -c "REDISCLI_AUTH=\"redis\"  redis-cli -h redis-master"'
@@ -114,3 +115,5 @@ export PATH=/home/gbtimmon/.meteor:$PATH
 . ~/bin/aws-ec2-ls.sh
 complete -C '/usr/local/bin/aws_completer' aws
 
+export PHP_VERSION=8.1
+. ~/.secrets

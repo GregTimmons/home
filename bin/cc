@@ -1,0 +1,89 @@
+#!/bin/bash
+
+# Claude Code screen session manager
+# Usage:
+#   cc              - start/resume default claude session
+#   cc myproject    - start/resume claude_myproject session
+#   cc -k           - kill default session
+#   cc -k myproject - kill claude_myproject session
+#   cc -h, --help   - show this help message
+
+# Parse command line options
+KILL_MODE=false
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        -h|--help)
+            echo "Claude Code screen session manager"
+            echo ""
+            echo "Usage:"
+            echo "  cc              - start/resume default claude session"
+            echo "  cc myproject    - start/resume claude_myproject session"
+            echo "  cc -k           - kill default session"
+            echo "  cc -y           - Use yolo mode"
+            echo "  cc -k myproject - kill claude_myproject session"
+            echo "  cc -h, --help   - show this help message"
+            exit 0
+            ;;
+        -k|--kill)
+            KILL_MODE=true
+            shift
+            ;;
+        -y|--yolo)
+            YOLO_MODE=--dangerously-skip-permissions
+            shift
+            ;;
+        *)
+            SESSION_SUFFIX="$1"
+            shift
+            ;;
+    esac
+done
+
+# Set screen name based on argument
+if [ -z "$SESSION_SUFFIX" ]; then
+    SCREEN_NAME="claude"
+else
+    SCREEN_NAME="claude_$SESSION_SUFFIX"
+fi
+
+# Kill mode
+if [ "$KILL_MODE" = true ]; then
+    if screen -ls | grep -q "$SCREEN_NAME"; then
+        echo "Killing screen session: $SCREEN_NAME..."
+        screen -S "$SCREEN_NAME" -X quit
+    else
+        echo "No screen session named '$SCREEN_NAME' is running"
+    fi
+    exit 0
+fi
+
+# Display screen key reminders
+echo "========================================="
+echo "Claude Code Screen Session: $SCREEN_NAME"
+echo "========================================="
+echo "Detach: Ctrl+A then D"
+echo "Reattach: screen -r $SCREEN_NAME"
+echo "List sessions: screen -ls"
+echo "========================================="
+echo ""
+
+# Check if a screen session with this name already exists
+if screen -ls | grep -q "$SCREEN_NAME"; then
+    echo "Resuming existing screen session: $SCREEN_NAME..."
+    screen -r "$SCREEN_NAME"
+else
+    echo "Starting new screen session: $SCREEN_NAME..."
+    # Create a temporary file with the reminder message
+    REMINDER_FILE="/tmp/claude_screen_reminder_$$.txt"
+    cat > "$REMINDER_FILE" << EOF
+========================================
+Claude Code Screen Session: $SCREEN_NAME
+========================================
+Detach: Ctrl+A then D
+Reattach: screen -r $SCREEN_NAME
+List sessions: screen -ls
+========================================
+EOF
+    # Start Claude with a command to show the reminder and use node 22
+    screen -S "$SCREEN_NAME" bash -c "cat '$REMINDER_FILE' && rm -f '$REMINDER_FILE' && echo && source ~/.nvm/nvm.sh && nvm use 22 && claude $YOLO_MODE"
+fi
