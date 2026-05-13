@@ -9,6 +9,5 @@
 !.config/nvim/lua/*
 !.config/nvim/lua/plugins
 !.config/nvim/lua/plugins/*
-!.cursor
 !bin
 !bin/*
