@@ -13,10 +13,6 @@ setopt HIST_IGNORE_SPACE
 setopt HIST_REDUCE_BLANKS
 setopt INC_APPEND_HISTORY
 
-if [[ -x /usr/bin/lesspipe ]]; then
-  eval "$(SHELL=/bin/sh /usr/bin/lesspipe)"
-fi
-
 export GIT_PS1_SHOWDIRTYSTATE=1
 
 autoload -Uz colors vcs_info
@@ -49,19 +45,6 @@ alias ll='ls -alF'
 alias la='ls -A'
 alias l='ls -CF'
 
-alert() {
-  local last_status=$?
-  local icon="terminal"
-  [[ $last_status -ne 0 ]] && icon="error"
-  local last_cmd
-  last_cmd="$(fc -ln -1 | sed -E 's/[;&|][[:space:]]*alert$//')"
-  if command -v terminal-notifier >/dev/null 2>&1; then
-    terminal-notifier -title "Shell Alert" -message "$last_cmd"
-  elif command -v notify-send >/dev/null 2>&1; then
-    notify-send --urgency=low -i "$icon" "$last_cmd"
-  fi
-}
-
 [[ -f "$HOME/.zsh_aliases" ]] && source "$HOME/.zsh_aliases"
 [[ -f "$HOME/.bash_aliases" ]] && source "$HOME/.bash_aliases"
 
@@ -76,59 +59,41 @@ if [[ -s "$NVM_DIR/bash_completion" ]]; then
   source "$NVM_DIR/bash_completion"
 fi
 
-if [[ "$(uname -s)" == "Linux" ]]; then
-  if ! pgrep -x dockerd >/dev/null 2>&1; then
-    echo "Starting the docker daemon..."
-    sudo dockerd >/dev/null 2>&1 &
-    disown
-  else
-    echo "Docker appears to be running..."
-  fi
-fi
 
 typeset -U path PATH
-[[ -d /usr/local/go/bin ]] && path=(/usr/local/go/bin $path)
-[[ -d "$HOME/.meteor" ]] && path=("$HOME/.meteor" $path)
 [[ -d "$HOME/bin" ]] && path=("$HOME/bin" $path)
-[[ -d /snap/bin ]] && path+=("/snap/bin")
+[[ -d "/opt/homebrew/opt/gnu-sed/libexec/gnubin" ]] && path=("/opt/homebrew/opt/gnu-sed/libexec/gnubin" $path)
+[[ -d "/snap/bin" ]] && path=("/snap/bin" $path)
+[[ -d "/opt/homebrew/bin" ]] && path=("/opt/homebrew/bin" $path)
 export PATH
 
 export BROWSER=chrome
 
-if [[ "$(uname -s)" == "Linux" ]]; then
-  if screen -ls 2>&1 | grep -q "Cannot make"; then
-    echo "Creating /run/screen directory..."
-    sudo mkdir -p /run/screen && sudo chmod 777 /run/screen
-  else
-    echo "Screen appears to be ok..."
-  fi
+alias m1='cd ~/workspace/partsledger-middleware'
+alias m2='cd ~/workspace/parts'
+alias m3='cd ~/workspace/sl_app'
+alias m4='cd ~/workspace/partsledger-scripts/DataQuality'
+alias m5='cd ~/workspace/SNaaP/'
+alias m6='cd ~/workspace/ai-scheduler'
+
+# Delegate bash scripts to bash interpreter, capturing env var changes
+[[ -f "$HOME/bin/delegate_to_bash.zsh" ]] && source "$HOME/bin/delegate_to_bash.zsh"
+
+if [[ -f "$HOME/bin/awsp" ]]; then
+    awsp() { delegate_to_bash "$HOME/bin/awsp" awsp AWS_PROFILE AWS_REGION AWS_DEFAULT_REGION -- "$@"; }
+fi
+if [[ -f "$HOME/bin/aws-ssm" ]]; then
+    aws-ssm() { delegate_to_bash "$HOME/bin/aws-ssm" aws-ssm -- "$@"; }
+fi
+if [[ -f "$HOME/bin/aws-ec2-ls.sh" ]]; then
+    aws-ec2-ls() { delegate_to_bash "$HOME/bin/aws-ec2-ls.sh" aws-ec2-ls -- "$@"; }
 fi
 
-alias m1='cd /workspace/partsledger-middleware'
-alias m2='cd /workspace/parts'
-alias m3='cd /workspace/sl_app'
-alias m4='cd /workspace/partsledger-scripts/DataQuality'
-alias m5='cd /workspace/SNaaP/'
-alias m6='cd /workspace/scheduler'
-if command -v docker-compose >/dev/null 2>&1; then
-  alias dc='docker-compose'
-else
-  alias dc='docker compose'
-fi
-alias kc='kubectl'
-alias lredis='kubectl exec --tty -i redis-client --namespace backend -- bash -c "REDISCLI_AUTH=\"redis\" redis-cli -h redis-master"'
-
-[[ -f "$HOME/.cargo/env" ]] && source "$HOME/.cargo/env"
-
-[[ -f "$HOME/bin/awsp" ]] && source "$HOME/bin/awsp"
-[[ -f "$HOME/bin/aws-ssm" ]] && source "$HOME/bin/aws-ssm"
-[[ -f "$HOME/bin/aws-ec2-ls.sh" ]] && source "$HOME/bin/aws-ec2-ls.sh"
 if command -v aws_completer >/dev/null 2>&1; then
   autoload -Uz bashcompinit
   bashcompinit
   complete -C "$(command -v aws_completer)" aws
 fi
 
-export PATH="/opt/homebrew/bin:$PATH"
 export PHP_VERSION=8.1
 [[ -f "$HOME/.secrets" ]] && source "$HOME/.secrets"
