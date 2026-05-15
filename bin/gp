@@ -1,7 +1,28 @@
 #!/bin/bash
 
-# gp - git push with automatic upstream prompt
+# gp - git push with automatic upstream prompt and protected branch warning
 
+branch=$(git branch --show-current)
+
+# Check for protected branches
+protected_branches="main master develop development stage staging"
+for protected in $protected_branches; do
+    if [ "$branch" = "$protected" ]; then
+        echo "Warning: You're about to push to '$branch'"
+        read -p "Are you sure? [y/N] " response
+        case "$response" in
+            [yY]|[yY][eE][sS])
+                ;;
+            *)
+                echo "Push cancelled."
+                exit 1
+                ;;
+        esac
+        break
+    fi
+done
+
+# Attempt push
 output=$(git push 2>&1)
 exit_code=$?
 
@@ -12,7 +33,6 @@ fi
 
 # Check if the error is about no upstream branch
 if echo "$output" | grep -q "has no upstream branch"; then
-    branch=$(git branch --show-current)
     echo "Branch '$branch' has no upstream."
     read -p "Create upstream and push? [Y/n] " response
     
