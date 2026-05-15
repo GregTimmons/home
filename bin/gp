@@ -1,0 +1,32 @@
+#!/bin/bash
+
+# gp - git push with automatic upstream prompt
+
+output=$(git push 2>&1)
+exit_code=$?
+
+if [ $exit_code -eq 0 ]; then
+    echo "$output"
+    exit 0
+fi
+
+# Check if the error is about no upstream branch
+if echo "$output" | grep -q "has no upstream branch"; then
+    branch=$(git branch --show-current)
+    echo "Branch '$branch' has no upstream."
+    read -p "Create upstream and push? [Y/n] " response
+    
+    case "$response" in
+        [nN]|[nN][oO])
+            echo "Push cancelled."
+            exit 1
+            ;;
+        *)
+            git push --set-upstream origin "$branch"
+            ;;
+    esac
+else
+    # Some other error, just print it
+    echo "$output"
+    exit $exit_code
+fi
