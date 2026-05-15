@@ -14,10 +14,13 @@ setopt HIST_IGNORE_SPACE
 setopt HIST_REDUCE_BLANKS
 setopt INC_APPEND_HISTORY
 setopt PROMPT_SUBST
+unsetopt MENU_COMPLETE
+setopt AUTO_MENU
+setopt AUTO_LIST
 
 export PYENV_ROOT="$HOME/.pyenv"
-export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01'
 export NVM_DIR="$HOME/.nvm"
+export GCC_COLORS='error=01;31:warning=01;35:note=01;36:caret=01;32:locus=01:quote=01'
 export BROWSER=chrome
 export PHP_VERSION=8.1
 
@@ -29,12 +32,12 @@ autoload -Uz zsh_prompt && zsh_prompt
 autoload -Uz delegate_to_bash
 
 alias ls='ls -G'
-alias m1='cd ~/workspace/partsledger-middleware'
+alias m1='cd ~/workspace/partsledger-middleware '
 alias m2='cd ~/workspace/parts'
 alias m3='cd ~/workspace/sl_app'
 alias m4='cd ~/workspace/partsledger-scripts/DataQuality'
 alias m5='cd ~/workspace/SNaaP/'
-alias m6='cd ~/workspace/ai-scheduler'
+alias m6='cd ~/workspace/ai-scheduler && nvm use 22'
 
 opt_source "$HOME/.zsh_aliases"
 opt_source "$HOME/.bash_aliases"
